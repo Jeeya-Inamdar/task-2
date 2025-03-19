@@ -41,7 +41,6 @@ const router = express.Router();
 router.post(
   "/create",
   protectRoute,
-  isAdminRoute,
   upload.array("attachments", 1000),
   createTask
 );
