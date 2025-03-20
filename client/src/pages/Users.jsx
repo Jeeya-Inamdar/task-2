@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Title from "../components/Title";
 import Button from "../components/Button";
 import { IoMdAdd } from "react-icons/io";
-import { summary } from "../assets/data";
 import { toast } from "sonner";
 import { getInitials } from "../utils";
 import clsx from "clsx";
@@ -19,10 +18,28 @@ const Users = () => {
   const [open, setOpen] = useState(false);
   const [openAction, setOpenAction] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [filteredUsers, setFilteredUsers] = useState([]);
 
   const { data, isLoading, refetch } = useGetTeamListQuery();
   const [deleteUser] = useDeleteUserMutation();
   const [userAction] = useUserActionMutation();
+
+  // Filter out superadmin users
+  useEffect(() => {
+    if (data) {
+      console.log("All users:", data); // Debug log to check user data structure
+
+      // Filter out all users with role "superadmin" (case insensitive)
+      const filtered = data.filter((user) => {
+        // Check if role property exists and is not 'superadmin' (case insensitive)
+        if (!user.role) return true; // Keep users without role property
+        return user.role.toLowerCase() !== "superadmin";
+      });
+
+      console.log("Filtered users:", filtered); // Debug log to check filtered results
+      setFilteredUsers(filtered);
+    }
+  }, [data]);
 
   const userActionHandler = async () => {
     try {
@@ -136,7 +153,7 @@ const Users = () => {
     <>
       <div className="w-full md:px-1 px-0 mb-6">
         <div className="flex items-center justify-between mb-8">
-          <Title title="  Team Members" />
+          <Title title="Team Members" />
           <Button
             label="Add New User"
             icon={<IoMdAdd className="text-lg" />}
@@ -146,16 +163,26 @@ const Users = () => {
         </div>
 
         <div className="bg-white px-2 md:px-4 py-4 shadow-md rounded">
-          <div className="overflow-x-auto">
-            <table className="w-full mb-5">
-              <TableHeader />
-              <tbody>
-                {data?.map((user, index) => (
-                  <TableRow key={index} user={user} />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {isLoading ? (
+            <div className="py-8 text-center">Loading users...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              {data && data.length > 0 && filteredUsers.length === 0 ? (
+                <div className="py-8 text-center">
+                  No users to display after filtering
+                </div>
+              ) : (
+                <table className="w-full mb-5">
+                  <TableHeader />
+                  <tbody>
+                    {filteredUsers?.map((user, index) => (
+                      <TableRow key={index} user={user} />
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

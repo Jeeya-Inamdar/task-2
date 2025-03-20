@@ -1,7 +1,7 @@
 import Task from "../models/task.js";
 import User from "../models/user.js";
 import Attachment from "../models/Attachment.js";
-import s3 from "../awsConfig.js";
+import { s3 } from "../awsConfig.js";
 import dotenv from "dotenv";
 
 dotenv.config();

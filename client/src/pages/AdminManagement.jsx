@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Title from "../components/Title";
 import Button from "../components/Button";
 import { toast } from "sonner";
@@ -13,9 +13,27 @@ import {
 const AdminManagement = () => {
   const { data: users, isLoading, refetch } = useGetTeamListQuery();
   const [promoteToAdmin] = usePromoteToAdminMutation();
+  const [filteredUsers, setFilteredUsers] = useState([]);
 
   // State to manage admin toggle for each user
   const [adminStatus, setAdminStatus] = useState({});
+
+  // Debug and filter out superadmin users
+  useEffect(() => {
+    if (users) {
+      console.log("All users:", users); // Debug log to check user data structure
+
+      // Filter out all users with role "superadmin" (case insensitive)
+      const filtered = users.filter((user) => {
+        // Check if role property exists and is not 'superadmin' (case insensitive)
+        if (!user.role) return true; // Keep users without role property
+        return user.role.toLowerCase() !== "superadmin";
+      });
+
+      console.log("Filtered users:", filtered); // Debug log to check filtered results
+      setFilteredUsers(filtered);
+    }
+  }, [users]);
 
   // Handle toggle change
   const handleAdminToggle = async (user, newStatus) => {
@@ -114,14 +132,20 @@ const AdminManagement = () => {
           <div className="py-8 text-center">Loading users...</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full mb-5">
-              <TableHeader />
-              <tbody>
-                {users?.map((user, index) => (
-                  <TableRow key={index} user={user} />
-                ))}
-              </tbody>
-            </table>
+            {users && users.length > 0 && filteredUsers.length === 0 ? (
+              <div className="py-8 text-center">
+                No users to display after filtering
+              </div>
+            ) : (
+              <table className="w-full mb-5">
+                <TableHeader />
+                <tbody>
+                  {filteredUsers?.map((user, index) => (
+                    <TableRow key={index} user={user} />
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
       </div>
@@ -130,3 +154,4 @@ const AdminManagement = () => {
 };
 
 export default AdminManagement;
+// Compare this snippet from client/src/pages/AdminManagement.jsx:

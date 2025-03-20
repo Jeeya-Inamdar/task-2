@@ -182,7 +182,8 @@ const AddTask = ({ open, setOpen, task, onTaskCreated }) => {
                 selected={priority}
                 setSelected={setPriority}
               />
-
+            </div>
+            {/* 
               <div className="w-full flex items-center justify-center mt-4">
                 <label
                   className="flex items-center gap-1 text-base text-ascent-2 hover:text-ascent-1 cursor-pointer my-4"
@@ -199,21 +200,19 @@ const AddTask = ({ open, setOpen, task, onTaskCreated }) => {
                   <BiImages />
                   <span>Add Assets</span>
                 </label>
-              </div>
-            </div>
+              </div> */}
 
-            <div className="bg-gray-50 py-6 sm:flex sm:flex-row-reverse gap-4">
-              {uploading ? (
+            <div className=" py-6 sm:flex sm:flex-row-reverse gap-4">
+              {/* {uploading ? (
                 <span className="text-sm py-2 text-red-500">
                   Uploading assets
                 </span>
-              ) : (
-                <Button
-                  label="Submit"
-                  type="submit"
-                  className="bg-blue-600 px-8 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto"
-                />
-              )}
+              ) : ( */}
+              <Button
+                label="Submit"
+                type="submit"
+                className="bg-blue-600 px-8 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto"
+              />
 
               <Button
                 type="button"

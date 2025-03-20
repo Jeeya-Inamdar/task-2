@@ -70,7 +70,7 @@ const Sidebar = () => {
   // Determine which links to show based on user role
   let sidebarLinks = user?.isAdmin ? linkData : linkData.slice(0, 5);
 
-  // Add superadmin link if user is a superadmin
+  // Add superadmin link if user is a superadmin (regardless of admin status)
   if (user?.superadmin) {
     sidebarLinks = [...sidebarLinks, superAdminLink];
   }

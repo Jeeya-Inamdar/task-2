@@ -1,6 +1,8 @@
 import User from "../models/user.js";
 import { createJWT } from "../utils/index.js";
 import Notice from "../models/notification.js";
+import crypto from "crypto";
+import { SES } from "../awsConfig.js";
 
 export const promoteToAdmin = async (req, res) => {
   try {
@@ -47,7 +49,31 @@ export const registerUser = async (req, res) => {
     const { name, email, superadmin, password, isAdmin, role, title } =
       req.body;
 
-    const userExist = await User.findOne({ email });
+    // Email validation
+    // Check if email exists and is a string
+    if (!email || typeof email !== "string") {
+      return res.status(400).json({
+        status: false,
+        message: "Email is required and must be a string",
+      });
+    }
+
+    // Convert email to lowercase
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Validate email format using regex
+    const emailRegex =
+      /^[a-z0-9]+([\._-]?[a-z0-9]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,})$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({
+        status: false,
+        message:
+          "Invalid email format. Email should contain only lowercase letters, numbers, and limited special characters.",
+      });
+    }
+
+    // Check if user already exists with the normalized email
+    const userExist = await User.findOne({ email: normalizedEmail });
 
     if (userExist) {
       return res.status(400).json({
@@ -58,7 +84,7 @@ export const registerUser = async (req, res) => {
 
     const user = await User.create({
       name,
-      email,
+      email: normalizedEmail, // Save normalized email
       password,
       isAdmin,
       superadmin,
@@ -87,7 +113,18 @@ export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    // Normalize email for login comparison
+    const normalizedEmail = email?.toLowerCase().trim();
+
+    // Basic validation
+    if (!normalizedEmail || !password) {
+      return res.status(400).json({
+        status: false,
+        message: "Email and password are required",
+      });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       return res
@@ -120,7 +157,6 @@ export const loginUser = async (req, res) => {
     return res.status(400).json({ status: false, message: error.message });
   }
 };
-
 export const logoutUser = async (req, res) => {
   try {
     res.cookie("token", "", {
@@ -290,5 +326,153 @@ export const deleteUserProfile = async (req, res) => {
   } catch (error) {
     console.log(error);
     return res.status(400).json({ status: false, message: error.message });
+  }
+};
+
+//* Configure AWS SES
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Normalize email
+    const normalizedEmail = email?.toLowerCase().trim();
+
+    if (!normalizedEmail) {
+      return res.status(400).json({
+        status: false,
+        message: "Email is required",
+      });
+    }
+
+    // Find user with the provided email
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return res.status(404).json({
+        status: false,
+        message: "User with this email does not exist",
+      });
+    }
+
+    // Generate password reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    // Set password reset token and expiration (valid for 1 hour)
+    user.resetPasswordToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+    user.resetPasswordExpire = Date.now() + 60 * 60 * 1000; // 1 hour
+
+    await user.save();
+
+    // Create reset URL
+    const resetUrl = `${req.protocol}://${req.get(
+      "host"
+    )}/reset-password/${resetToken}`;
+
+    // Create email content
+    const params = {
+      Source: process.env.MAIL_FROM,
+      Destination: {
+        ToAddresses: [user.email],
+      },
+      Message: {
+        Subject: {
+          Data: "Password Reset Request",
+          Charset: "UTF-8",
+        },
+        Body: {
+          Html: {
+            Data: `
+              <h2>Hello ${user.name},</h2>
+              <p>You requested a password reset. Please click the link below to set a new password:</p>
+              <a href="${resetUrl}" target="_blank">Reset Password</a>
+              <p>If you didn't request this, please ignore this email.</p>
+              <p>This link will expire in 1 hour.</p>
+            `,
+            Charset: "UTF-8",
+          },
+          Text: {
+            Data: `Hello ${user.name},\n\nYou requested a password reset. Please visit the following link to set a new password: ${resetUrl}\n\nIf you didn't request this, please ignore this email.\n\nThis link will expire in 1 hour.`,
+            Charset: "UTF-8",
+          },
+        },
+      },
+    };
+
+    // Send email
+    await SES.sendEmail(params).promise();
+
+    return res.status(200).json({
+      status: true,
+      message: "Password reset link sent to your email",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      status: false,
+      message: "Server error while processing password reset request",
+    });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { resetToken } = req.params;
+    const { password } = req.body;
+
+    if (!resetToken || !password) {
+      return res.status(400).json({
+        status: false,
+        message: "Reset token and new password are required",
+      });
+    }
+
+    // Hash the reset token to compare with stored hash
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    // Find user with valid reset token and token not expired
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid or expired reset token",
+      });
+    }
+
+    // Set new password
+    user.password = password;
+
+    // Clear reset token fields
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    // Create JWT token for auto login after password reset
+    createJWT(res, user._id);
+
+    // Remove password from response
+    user.password = undefined;
+
+    return res.status(200).json({
+      status: true,
+      message: "Password updated successfully",
+      user,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      status: false,
+      message: "Server error while resetting password",
+    });
   }
 };

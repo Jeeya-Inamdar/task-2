@@ -554,7 +554,7 @@ const Tasks = () => {
       />
 
       {/* Add global styles for animations */}
-      <style jsx global>{`
+      <style jsx="true">{`
         @keyframes fadeIn {
           from {
             opacity: 0;
