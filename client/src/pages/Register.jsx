@@ -79,6 +79,7 @@ const Register = () => {
 
             <div className="flex flex-col gap-y-5">
               <Textbox
+                id="name" // Add a unique id
                 placeholder="Full Name"
                 type="text"
                 name="name"
@@ -90,6 +91,7 @@ const Register = () => {
                 error={errors.name ? errors.name.message : ""}
               />
               <Textbox
+                id="title"
                 placeholder="CEO, Manager, etc."
                 type="text"
                 name="title"
@@ -101,6 +103,7 @@ const Register = () => {
                 error={errors.title ? errors.title.message : ""}
               />
               <Textbox
+                id="role" // Add a unique id
                 placeholder="Intern, HR, etc."
                 type="text"
                 name="role"
@@ -112,6 +115,7 @@ const Register = () => {
                 error={errors.role ? errors.role.message : ""}
               />
               <Textbox
+                id="email" // Add a unique id
                 placeholder="email@example.com"
                 type="email"
                 name="email"
@@ -127,6 +131,7 @@ const Register = () => {
                 error={errors.email ? errors.email.message : ""}
               />
               <Textbox
+                id="password"
                 placeholder="your password"
                 type="password"
                 name="password"

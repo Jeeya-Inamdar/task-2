@@ -16,6 +16,8 @@ import Dashboard from "./pages/Dashboard";
 import { setOpenSidebar } from "./redux/slices/authSlice";
 import AdminManagement from "./pages/AdminManagement";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 function Layout() {
   const { user } = useSelector((state) => state.auth);
@@ -112,6 +114,8 @@ function App() {
         </Route>
         <Route path="/register" element={<Register />} />
         <Route path="/log-in" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:resetToken" element={<ResetPassword />} />
       </Routes>
 
       <Toaster richColors />

@@ -81,6 +81,22 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["Users"], // Add this to invalidate cache
     }),
+
+    forgotPassword: builder.mutation({
+      query: (data) => ({
+        url: `${USER_URL}/forgotpassword`,
+        method: "POST",
+        body: data,
+      }),
+    }),
+
+    resetPassword: builder.mutation({
+      query: (data) => ({
+        url: `${USER_URL}/changepassword/${data.resetToken}`,
+        method: "POST",
+        body: { password: data.password },
+      }),
+    }),
   }),
 });
 
@@ -94,4 +110,6 @@ export const {
   useDeleteUserMutation,
   useUserActionMutation,
   usePromoteToAdminMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
 } = userApiSlice;

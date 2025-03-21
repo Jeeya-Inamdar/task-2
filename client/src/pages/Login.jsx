@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Textbox from "../components/Textbox";
 import Button from "../components/Button";
 import { useSelector, useDispatch } from "react-redux";
@@ -37,7 +37,7 @@ const Login = () => {
 
   useEffect(() => {
     user && navigate("/dashboard");
-  }, [user]);
+  }, [user, navigate]);
 
   return (
     <div className="w-full min-h-screen flex items-center justify-center flex-col lg:flex-row bg-[#f3f4f6]">
@@ -70,7 +70,7 @@ const Login = () => {
                 Welcome back!
               </p>
               <p className="text-center text-base text-gray-700 ">
-                Keep all your credential safge.
+                Keep all your credentials safe.
               </p>
             </div>
 
@@ -98,9 +98,12 @@ const Login = () => {
                 error={errors.password ? errors.password.message : ""}
               />
 
-              <span className="text-sm text-gray-500 hover:text-blue-600 hover:underline cursor-pointer">
-                Forget Password?
-              </span>
+              <Link
+                to="/forgot-password"
+                className="text-sm text-gray-500 hover:text-blue-600 hover:underline cursor-pointer"
+              >
+                Forgot Password?
+              </Link>
 
               {isLoading ? (
                 <Loading />

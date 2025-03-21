@@ -1,0 +1,55 @@
+# docker-compose.yml (place in your root directory)
+version: "3.8"
+
+services:
+  # MongoDB service
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - mern-network
+
+  # Server service (Express/Node.js)
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: mern-server
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb+srv://intern:intern123@cluster0.4xwuo.mongodb.net/
+      # Add other environment variables your app needs
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongodb
+    networks:
+      - mern-network
+
+  # Client service (React/Vite)
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: mern-client
+    restart: always
+    ports:
+      - "3000:8080" # Assuming you'll serve the built client with nginx
+    depends_on:
+      - server
+    networks:
+      - mern-network
+
+networks:
+  mern-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+    driver: local
