@@ -38,7 +38,12 @@ dotenv.config();
 const router = express.Router();
 
 //* TASK
-router.post("/create", upload.array("attachments", 1000), createTask);
+router.post(
+  "/create",
+  protectRoute,
+  upload.array("attachments", 1000),
+  createTask
+);
 
 router.post("/duplicate/:id", protectRoute, isAdminRoute, duplicateTask);
 router.post("/activity/:id", protectRoute, postTaskActivity);

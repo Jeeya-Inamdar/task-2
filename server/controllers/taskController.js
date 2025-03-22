@@ -127,13 +127,15 @@ export const createTask = async (req, res) => {
       location,
       meetingWith,
       earlyReminder,
-      repeat,
+      repeat, // We'll use this field for recurrence
+      repeatEndDate, // Optional: end date for recurring tasks
+      repeatCustomInterval, // For custom repeat intervals
       flagged,
       priority,
       stage,
       type,
       date,
-      dueDate, // Added dueDate field
+      dueDate,
       team,
     } = req.body;
 
@@ -144,6 +146,17 @@ export const createTask = async (req, res) => {
         .json({ status: false, message: "Due date is required" });
     }
 
+    // Validate recurrence data if specified
+    if (repeat && repeat !== "none") {
+      // For custom recurrence, ensure interval is specified
+      if (repeat === "custom" && !repeatCustomInterval) {
+        return res.status(400).json({
+          status: false,
+          message: "Custom recurrence requires interval specification",
+        });
+      }
+    }
+
     let text = "New task has been assigned to you";
     if (team?.length > 1) {
       text += ` and ${team.length - 1} ${
@@ -151,8 +164,14 @@ export const createTask = async (req, res) => {
       }.`;
     }
     text += ` The task priority is set to ${priority}. The due date is ${new Date(
-      dueDate // Use dueDate instead of date for notification
-    ).toDateString()}. Thank you!!!`;
+      dueDate
+    ).toDateString()}.`;
+
+    if (repeat && repeat !== "none") {
+      text += ` This is a recurring task (${repeat}).`;
+    }
+
+    text += " Thank you!!!";
 
     const activity = {
       type: "assigned",
@@ -162,7 +181,7 @@ export const createTask = async (req, res) => {
 
     let processedNotes = typeof notes === "string" ? { text: notes } : notes;
 
-    // Create Task with dueDate field
+    // Create Task with recurrence details
     const task = await Task.create({
       title,
       notes: processedNotes,
@@ -171,18 +190,22 @@ export const createTask = async (req, res) => {
       location,
       meetingWith,
       earlyReminder,
-      repeat,
+      repeat, // Recurrence type (daily, weekly, monthly, custom)
+      repeatEndDate, // Optional end date for recurrence
+      repeatCustomInterval, // For custom recurrence specification
       flagged,
       priority: priority.toLowerCase(),
       stage: stage,
       type,
       date,
-      dueDate, // Add dueDate field
+      dueDate,
       by: userId,
       isTrashed: false,
+      isRecurring: !!repeat && repeat !== "none", // Flag for recurring tasks
       activities: [activity],
       assets: [],
       team,
+      lastGeneratedDate: null, // Track when instances were last generated
     });
 
     let attachmentIds = [];
@@ -198,7 +221,7 @@ export const createTask = async (req, res) => {
 
       if (req.body.isVoiceNote && req.files.length > 0) {
         const voiceNoteAttachment = attachments.find((att) =>
-          att.fileType.startsWith("audio/")
+          att.fileType?.startsWith("audio/")
         );
         if (voiceNoteAttachment) {
           task.notes.voiceNote = voiceNoteAttachment._id;
@@ -865,3 +888,163 @@ export const deleteRestoreTask = async (req, res) => {
 //     res.status(500).json({ status: false, message: "Internal Server Error" });
 //   }
 // };
+
+//* GENERATING RECURRING TASKS
+export const generateRecurringTaskInstances = async (req, res) => {
+  try {
+    // Find all active recurring tasks that need instance generation
+    const today = new Date();
+    const recurringTasks = await Task.find({
+      isRecurring: true,
+      isTrashed: false,
+      $or: [
+        { lastGeneratedDate: { $lt: today } }, // Tasks that haven't generated today's instances
+        { lastGeneratedDate: null }, // Tasks that never generated instances
+      ],
+      $or: [
+        { repeatEndDate: { $gte: today } }, // End date is in the future
+        { repeatEndDate: null }, // No end date specified
+      ],
+    });
+
+    let generatedCount = 0;
+    for (const template of recurringTasks) {
+      const nextDueDate = calculateNextDueDate(template);
+
+      // Skip if the next due date is beyond the end date
+      if (
+        template.repeatEndDate &&
+        nextDueDate > new Date(template.repeatEndDate)
+      ) {
+        continue;
+      }
+
+      // Skip if we already have an instance for this date
+      const existingInstance = await Task.findOne({
+        recurringParentId: template._id,
+        dueDate: {
+          $gte: new Date(nextDueDate.setHours(0, 0, 0, 0)),
+          $lt: new Date(nextDueDate.setHours(23, 59, 59, 999)),
+        },
+      });
+
+      if (existingInstance) continue;
+
+      // Create a new instance of the recurring task
+      const instanceTask = await Task.create({
+        title: template.title,
+        notes: template.notes,
+        remindOnDate: calculateNextRemindDate(template, nextDueDate),
+        remindOnTime: template.remindOnTime,
+        location: template.location,
+        meetingWith: template.meetingWith,
+        earlyReminder: template.earlyReminder,
+        flagged: template.flagged,
+        priority: template.priority,
+        stage: "todo", // Always start as todo
+        type: template.type,
+        date: new Date(),
+        dueDate: nextDueDate,
+        by: template.by,
+        isTrashed: false,
+        isRecurringInstance: true, // Flag to mark this as an instance
+        recurringParentId: template._id, // Reference to the parent template
+        activities: [
+          {
+            type: "assigned",
+            activity: `Recurring task generated from template: ${template.title}`,
+            by: template.by,
+          },
+        ],
+        assets: [], // Don't copy attachments
+        team: template.team,
+      });
+
+      // Update notification for the team
+      await Notice.create({
+        team: template.team,
+        text: `Recurring task "${
+          template.title
+        }" is due on ${nextDueDate.toDateString()}.`,
+        task: instanceTask._id,
+      });
+
+      generatedCount++;
+    }
+
+    // Update last generated date for all processed templates
+    if (recurringTasks.length > 0) {
+      await Task.updateMany(
+        { _id: { $in: recurringTasks.map((t) => t._id) } },
+        { $set: { lastGeneratedDate: today } }
+      );
+    }
+
+    res.status(200).json({
+      status: true,
+      message: `Generated ${generatedCount} recurring task instances`,
+      count: generatedCount,
+    });
+  } catch (error) {
+    console.error("Error generating recurring tasks:", error);
+    res.status(500).json({ status: false, message: "Internal Server Error" });
+  }
+};
+
+// Helper function to calculate the next due date for a recurring task
+function calculateNextDueDate(task) {
+  const today = new Date();
+  let nextDueDate = new Date(today);
+
+  // If the task has a lastGeneratedDate, start from there
+  if (task.lastGeneratedDate) {
+    nextDueDate = new Date(task.lastGeneratedDate);
+  }
+
+  // Calculate next due date based on recurrence pattern
+  switch (task.repeat) {
+    case "daily":
+      nextDueDate.setDate(nextDueDate.getDate() + 1);
+      break;
+    case "weekly":
+      nextDueDate.setDate(nextDueDate.getDate() + 7);
+      break;
+    case "monthly":
+      nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+      break;
+    case "custom":
+      // For custom recurrence, use the specified interval (in days)
+      if (task.repeatCustomInterval) {
+        nextDueDate.setDate(
+          nextDueDate.getDate() + parseInt(task.repeatCustomInterval)
+        );
+      } else {
+        // Default to weekly if no custom interval specified
+        nextDueDate.setDate(nextDueDate.getDate() + 7);
+      }
+      break;
+    default:
+      // Default to daily
+      nextDueDate.setDate(nextDueDate.getDate() + 1);
+  }
+
+  return nextDueDate;
+}
+
+// Helper function to calculate next reminder date based on due date
+function calculateNextRemindDate(task, nextDueDate) {
+  if (!task.remindOnDate) return null;
+
+  // Calculate the difference between original due date and remind date
+  const originalDueDate = new Date(task.dueDate);
+  const originalRemindDate = new Date(task.remindOnDate);
+  const daysDifference = Math.round(
+    (originalDueDate - originalRemindDate) / (1000 * 60 * 60 * 24)
+  );
+
+  // Apply the same difference to the new due date
+  const nextRemindDate = new Date(nextDueDate);
+  nextRemindDate.setDate(nextRemindDate.getDate() - daysDifference);
+
+  return nextRemindDate;
+}

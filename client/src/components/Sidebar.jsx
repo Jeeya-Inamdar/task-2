@@ -24,21 +24,7 @@ const linkData = [
     link: "tasks",
     icon: <FaTasks />,
   },
-  {
-    label: "Completed",
-    link: "completed/completed",
-    icon: <MdTaskAlt />,
-  },
-  {
-    label: "In Progress",
-    link: "in-progress/in progress",
-    icon: <MdOutlinePendingActions />,
-  },
-  {
-    label: "To Do",
-    link: "todo/todo",
-    icon: <MdOutlinePendingActions />,
-  },
+
   {
     label: "Team",
     link: "team",
@@ -68,7 +54,9 @@ const Sidebar = () => {
   const path = location.pathname.split("/")[1];
 
   // Determine which links to show based on user role
-  let sidebarLinks = user?.isAdmin ? linkData : linkData.slice(0, 5);
+  // let sidebarLinks = user?.isAdmin ? linkData : linkData.slice(0, 2);
+  console.log("User admin status:", user?.isAdmin);
+  let sidebarLinks = user?.isAdmin === true ? linkData : linkData.slice(0, 2);
 
   // Add superadmin link if user is a superadmin (regardless of admin status)
   if (user?.superadmin) {

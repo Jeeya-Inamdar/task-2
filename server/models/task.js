@@ -22,7 +22,17 @@ const taskSchema = new Schema(
     location: { type: String },
     meetingWith: { type: String },
     earlyReminder: { type: Boolean, default: false },
-    repeat: { type: String, enum: ["daily", "weekly", "monthly", "custom"] },
+    repeat: {
+      type: String,
+      enum: ["none", "daily", "weekly", "monthly", "custom"],
+      default: "none",
+    },
+    repeatEndDate: { type: Date }, // Optional end date for recurring tasks
+    repeatCustomInterval: { type: Number }, // For custom recurrence (in days)
+    isRecurring: { type: Boolean, default: false }, // Flag for recurring template tasks
+    isRecurringInstance: { type: Boolean, default: false }, // Flag for instances of recurring tasks
+    recurringParentId: { type: Schema.Types.ObjectId, ref: "Task" }, // Link instances to template
+    lastGeneratedDate: { type: Date }, // Track when instances were last generated,
     flagged: { type: Boolean, default: false },
 
     priority: {

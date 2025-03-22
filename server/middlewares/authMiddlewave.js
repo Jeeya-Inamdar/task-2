@@ -4,7 +4,9 @@ import User from "../models/user.js";
 const protectRoute = async (req, res, next) => {
   try {
     let token = req.cookies?.token;
-
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized - No token" });
+    }
     if (token) {
       const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
 
@@ -31,6 +33,11 @@ const protectRoute = async (req, res, next) => {
     }
   } catch (error) {
     console.error(error);
+    if (error.name === "TokenExpiredError") {
+      return res
+        .status(403)
+        .json({ message: "Token expired, please login again" });
+    }
     return res
       .status(401)
       .json({ status: false, message: "Not authorized. Try login again." });

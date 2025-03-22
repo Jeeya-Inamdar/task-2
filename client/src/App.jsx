@@ -1,5 +1,6 @@
 import { Transition } from "@headlessui/react";
 import clsx from "clsx";
+import axios from "axios";
 import { Fragment, useRef } from "react";
 import { IoClose } from "react-icons/io5";
 import { useDispatch, useSelector } from "react-redux";
@@ -18,6 +19,27 @@ import AdminManagement from "./pages/AdminManagement";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+
+const api = axios.create({
+  baseURL: "http://localhost:8080/api",
+  withCredentials: true, // Important for cookies
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      if (error.response.status === 403) {
+        alert("Session expired. Please log in again.");
+        localStorage.removeItem("accessToken");
+        window.location.href = "/log-in"; // Redirect to login
+      } else if (error.response.status === 401) {
+        window.location.href = "/log-in";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 function Layout() {
   const { user } = useSelector((state) => state.auth);

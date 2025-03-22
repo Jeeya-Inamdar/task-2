@@ -125,9 +125,7 @@ const FlaggedTasksDialog = ({ isOpen, onClose, flaggedTasks }) => {
                         )}
 
                         <div className="flex items-center gap-1">
-                          <span>
-                            Due date {moment(task?.dueDate).fromNow()}
-                          </span>
+                          <span>Created {moment(task.date).fromNow()}</span>
                         </div>
                       </div>
                     </div>
@@ -252,17 +250,17 @@ const TaskTable = ({ tasks }) => {
               <BsFlagFill />
             </div>
           )}
-          {task?.remindOnDate && (
+          {task.remindOnDate && (
             <div
               className="text-blue-500 bg-blue-50 p-1.5 rounded-md"
-              title={`Reminder: ${moment(task?.remindOnDate).format(
+              title={`Reminder: ${moment(task.remindOnDate).format(
                 "MMM DD"
-              )} at ${task?.remindOnTime || "9:00 AM"}`}
+              )} at ${task.remindOnTime || "9:00 AM"}`}
             >
               <FaCalendarCheck />
             </div>
           )}
-          {/* {task.atLocation && (
+          {task.atLocation && (
             <div
               className="text-green-500 bg-green-50 p-1.5 rounded-md"
               title={`Location: ${task.atLocation}`}
@@ -277,7 +275,7 @@ const TaskTable = ({ tasks }) => {
             >
               <FaPersonCircleCheck />
             </div>
-          )} */}
+          )}
         </div>
       </td>
     </tr>
@@ -376,7 +374,7 @@ const UserTable = ({ users }) => {
     </thead>
   );
 
-  const TableRow = ({ user, tasks }) => (
+  const TableRow = ({ user }) => (
     <tr className="border-b border-gray-100 text-gray-700 hover:bg-gray-50 transition-colors">
       <td className="py-3 px-2 sm:px-3">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -579,7 +577,7 @@ const Dashboard = () => {
             </h4>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div
               className="border border-gray-100 p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
               onClick={() =>
