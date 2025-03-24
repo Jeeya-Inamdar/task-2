@@ -9,8 +9,6 @@ import { dbConnection } from "./utils/index.js";
 
 dotenv.config();
 
-dbConnection();
-
 const PORT = process.env.PORT || 8080;
 
 const app = express();
@@ -34,4 +32,13 @@ app.use("/api", routes);
 app.use(routeNotFound);
 app.use(errorHandler);
 
-app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+const startServer = async () => {
+  try {
+    await dbConnection();
+    app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+  } catch (error) {
+    console.log("Failed to start server:", error);
+  }
+};
+
+startServer();

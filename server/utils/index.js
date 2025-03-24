@@ -1,8 +1,13 @@
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
+import dotenv from "dotenv";
+dotenv.config();
+
 export const dbConnection = async () => {
   try {
+    console.log("MONGODB_URI:", process.env.MONGODB_URI); // Debugging line
+
     await mongoose.connect(process.env.MONGODB_URI);
 
     console.log("DB connection established");

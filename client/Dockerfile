@@ -1,16 +1,29 @@
-FROM node:20-alpine AS build
+# Use official Node.js LTS image
+FROM node:18-alpine AS build
 
+# Set working directory
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-# Add this line to debug
-RUN ls -la && ls -la ./nginx
 
-FROM nginx:alpine
+# Copy client dependencies
+COPY package.json package-lock.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the entire client codebase
+COPY . .
+
+# Build your app (adjust if using Vite/React accordingly)
+RUN npm run build
+
+# Final stage: Host static files with Nginx
+FROM nginx:stable-alpine
+
+# Copy built files from previous stage into nginx's HTML directory
 COPY --from=build /app/dist /usr/share/nginx/html
-# Try with explicit paths
-COPY --from=build /app/nginx/nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 8080
+
+# Expose port 80 (default HTTP port)
+EXPOSE 80
+
+# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
