@@ -15,7 +15,11 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://localhost:3001"],
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      " origin: 'https://task-2-1-my29.onrender.com',",
+    ],
     methods: ["GET", "POST", "DELETE", "PUT"],
     credentials: true,
   })
