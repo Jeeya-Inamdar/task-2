@@ -35,6 +35,10 @@ const Login = () => {
     }
   };
 
+  const navigateToRegister = () => {
+    navigate("/register");
+  };
+
   useEffect(() => {
     user && navigate("/dashboard");
   }, [user, navigate]);
@@ -114,6 +118,18 @@ const Login = () => {
                   className="w-full h-10 bg-blue-700 text-white rounded-full"
                 />
               )}
+
+              <div className="flex items-center justify-center mt-4">
+                <p className="text-gray-600 text-sm">
+                  New user?{" "}
+                  <span
+                    onClick={navigateToRegister}
+                    className="text-blue-600 font-medium cursor-pointer hover:underline"
+                  >
+                    Register here
+                  </span>
+                </p>
+              </div>
             </div>
           </form>
         </div>
